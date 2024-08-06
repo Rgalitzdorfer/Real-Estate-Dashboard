@@ -1,58 +1,53 @@
-import pandas as pd
-import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
-import plotly.graph_objects as go
-import plotly.express as px
-import argparse
+#Import Libraries
+import pandas as pd #DataFrame Manipulation 
+import dash #Dash
+from dash import dcc, html #Dash Components
+from dash.dependencies import Input, Output #Callback
+import plotly.graph_objects as go #Import Plotly Graph Objects
+import argparse #Argparse 
 
-# Load the dataset
-file_path = '/Users/ryangalitzdorfer/Downloads/MCAA/All_Data_2018.csv' 
-data = pd.read_csv(file_path, low_memory=False)
+#Load the Dataset
+file_path = '/Users/ryangalitzdorfer/Downloads/MCAA/All_Data_2018.csv' #Define File Path
+data = pd.read_csv(file_path, low_memory=False) #Load CSV File into DataFrame
 
-# Convert price columns to numeric, removing any non-numeric characters
-data['Current Price'] = pd.to_numeric(data['Current Price'].replace('[\$,]', '', regex=True))
-data['Original List Price'] = pd.to_numeric(data['Original List Price'].replace('[\$,]', '', regex=True))
+#Additional Data Cleaning
+data['Current Price'] = pd.to_numeric(data['Current Price'].replace('[\\$,]', '', regex=True)) #Clean & Convert 
+data['Original List Price'] = pd.to_numeric(data['Original List Price'].replace('[\\$,]', '', regex=True)) #Clean & Convert 
+data['DOM'] = pd.to_numeric(data['DOM'], errors='coerce') #Convert to Numeric
+data['Closed Date'] = pd.to_datetime(data['Closed Date']) #Convert to Datetime
+data['List Date'] = pd.to_datetime(data['List Date']) #Convert to Datetime
 
-# Convert DOM column to numeric, handling errors by coercing to NaN
-data['DOM'] = pd.to_numeric(data['DOM'], errors='coerce')
-
-# Convert date columns to datetime
-data['Closed Date'] = pd.to_datetime(data['Closed Date'])
-data['List Date'] = pd.to_datetime(data['List Date'])
-
-# Create a Dash application
-app = dash.Dash(__name__)
-
-# Layout of the dashboard
-app.layout = html.Div([
-    html.H1("Real Estate Data Dashboard"),
-    
-    dcc.Dropdown(
+#Create a Dash App
+app = dash.Dash(__name__) 
+#Layout of Dashboard
+app.layout = html.Div([ #Define Layout
+    html.H1("Real Estate Data Dashboard"), #Title of Dashboard
+    #Select Counties
+    dcc.Dropdown( 
         id='county-dropdown',
         options=[{'label': county, 'value': county} for county in data['County'].unique()],
         value=[],
         multi=True,
         placeholder="Select Counties"
     ),
-    
-    dcc.Dropdown(
+    #Select Towns
+    dcc.Dropdown(  
         id='town-dropdown',
         options=[{'label': town, 'value': town} for town in data['Area'].unique()],
         value=[],
         multi=True,
         placeholder="Select Towns"
     ),
-    
-    dcc.Dropdown(
+    #Select School District
+    dcc.Dropdown(  
         id='school-dropdown',
         options=[{'label': school, 'value': school} for school in data['School District'].unique()],
         value=[],
         multi=True,
         placeholder="Select School Districts"
     ),
-    
-    dcc.Dropdown(
+    #Select TimeFrame
+    dcc.Dropdown(  
         id='timeframe-dropdown',
         options=[
             {'label': '1 Month', 'value': '1M'},
@@ -64,23 +59,23 @@ app.layout = html.Div([
         value='1M',
         placeholder="Select Timeframe"
     ),
-    
-    dcc.DatePickerRange(
+    #Select Date for Above Specifications
+    dcc.DatePickerRange(  
         id='date-picker-range',
         start_date=data['Closed Date'].min(),
         end_date=data['Closed Date'].max(),
         display_format='YYYY-MM-DD'
     ),
-    
-    dcc.Graph(id='closed-sales-graph'),
-    dcc.Graph(id='median-price-graph'),
-    dcc.Graph(id='average-price-graph'),
-    dcc.Graph(id='sp-lp-percentage-graph'),
-    dcc.Graph(id='dom-graph')
+    #Graphs for Each TimeFrame
+    dcc.Graph(id='closed-sales-graph'), #Closed Sales
+    dcc.Graph(id='median-price-graph'), #Median Price
+    dcc.Graph(id='average-price-graph'), #Average Price
+    dcc.Graph(id='sp-lp-percentage-graph'), #SP/LP Percentage
+    dcc.Graph(id='dom-graph') #Days on Market
 ])
 
-# Callback to filter data based on dropdown selections
-@app.callback(
+#Filter Data Based on Dropdown Selections
+@app.callback(  #Define Callback
     [Output('closed-sales-graph', 'figure'),
      Output('median-price-graph', 'figure'),
      Output('average-price-graph', 'figure'),
@@ -93,63 +88,76 @@ app.layout = html.Div([
      Input('date-picker-range', 'start_date'),
      Input('date-picker-range', 'end_date')]
 )
-def update_graphs(selected_counties, selected_towns, selected_schools, selected_timeframe, start_date, end_date):
-    filtered_df = data.copy()
-    
-    if selected_counties:
+def update_graphs(selected_counties, selected_towns, selected_schools, selected_timeframe, start_date, end_date): #Callback Function Definition
+    filtered_df = data.copy()  
+    #Error Detection
+    if selected_counties: #Selected Counties
         filtered_df = filtered_df[filtered_df['County'].isin(selected_counties)]
-    if selected_towns:
+    if selected_towns: #Selected Towns
         filtered_df = filtered_df[filtered_df['Area'].isin(selected_towns)]
-    if selected_schools:
+    if selected_schools: #Selected Schools
         filtered_df = filtered_df[filtered_df['School District'].isin(selected_schools)]
-    
-    # Filter data based on timeframe
-    if selected_timeframe != 'Custom':
-        end_date = filtered_df['Closed Date'].max()
-        if selected_timeframe == '1M':
+    #Error Detection for TimeFrame
+    if selected_timeframe != 'Custom': 
+        end_date = filtered_df['Closed Date'].max() #Set End Date to Latest Date
+        if selected_timeframe == '1M':  
             start_date = end_date - pd.DateOffset(months=1)
-        elif selected_timeframe == '3M':
+        elif selected_timeframe == '3M':  
             start_date = end_date - pd.DateOffset(months=3)
-        elif selected_timeframe == '6M':
+        elif selected_timeframe == '6M':  
             start_date = end_date - pd.DateOffset(months=6)
-        elif selected_timeframe == '1Y':
+        elif selected_timeframe == '1Y': 
             start_date = end_date - pd.DateOffset(years=1)
-    
-    filtered_df = filtered_df[(filtered_df['Closed Date'] >= start_date) & (filtered_df['Closed Date'] <= end_date)]
+    filtered_df = filtered_df[(filtered_df['Closed Date'] >= start_date) & (filtered_df['Closed Date'] <= end_date)] #Filter Data by Date Range
 
-    # Print statements for debugging
-    print("Filtered DataFrame:", filtered_df)
-    print("Selected Counties:", selected_counties)
-    print("Selected Towns:", selected_towns)
-    print("Selected Schools:", selected_schools)
-    print("Selected Timeframe:", selected_timeframe)
-    print("Start Date:", start_date)
-    print("End Date:", end_date)
+    #Print Statements for Debugging
+    print("Filtered DataFrame:", filtered_df) 
+    print("Selected Counties:", selected_counties) 
+    print("Selected Towns:", selected_towns)  
+    print("Selected Schools:", selected_schools)  
+    print("Selected Timeframe:", selected_timeframe) 
+    print("Start Date:", start_date)  
+    print("End Date:", end_date)  
 
-    # Calculations for outputs
-    closed_sales = filtered_df['Closed Date'].count()
-    median_price = filtered_df['Current Price'].median()
-    average_price = filtered_df['Current Price'].mean()
-    sp_lp_percentage = ((filtered_df['Current Price'] / filtered_df['Original List Price']) * 100).mean()
-    dom = filtered_df['DOM'].mean()
+    #Data Manipulation
+    filtered_df = filtered_df.sort_values('Closed Date') #Sort by 'Closed Date'
+    num_intervals = 5 
+    interval_size = len(filtered_df) // num_intervals #Get 5 Evenly Spaced Points (Each 20% of Data)
+    agg_df_list = [] #Initialize 
+    for i in range(num_intervals): #Loop Through Intervals
+        start_index = i * interval_size #Start Index
+        end_index = (i + 1) * interval_size if i < num_intervals - 1 else len(filtered_df) #End Index
+        interval_df = filtered_df.iloc[start_index:end_index] #Slice
+        #Aggregate Data for Interval
+        agg_data = { 
+            'Closed Date': interval_df['Closed Date'].iloc[-1],
+            'Closed Sales': interval_df['Closed Date'].count(),
+            'Median Price': interval_df['Current Price'].median(),
+            'Average Price': interval_df['Current Price'].mean(),
+            'SP/LP Percentage': (interval_df['Current Price'] / interval_df['Original List Price'] * 100).mean(),
+            'Days on Market': interval_df['DOM'].mean()
+        }
+        agg_df_list.append(pd.DataFrame([agg_data])) #Add to List
 
-    # Print calculations for debugging
-    print("Closed Sales:", closed_sales)
-    print("Median Price:", median_price)
-    print("Average Price:", average_price)
-    print("SP/LP Percentage:", sp_lp_percentage)
-    print("Days on Market:", dom)
+    agg_df = pd.concat(agg_df_list, ignore_index=True) #Combine DataFrames
+    print("Aggregated DataFrame:", agg_df) #Print for Debugging
 
-    closed_sales_fig = px.bar(x=['Closed Sales'], y=[closed_sales], title='Closed Sales')
-    median_price_fig = px.bar(x=['Median Price'], y=[median_price], title='Median Price')
-    average_price_fig = px.bar(x=['Average Price'], y=[average_price], title='Average Price')
-    sp_lp_percentage_fig = px.bar(x=['SP/LP %'], y=[sp_lp_percentage], title='SP/LP Percentage')
-    dom_fig = px.bar(x=['Days on Market'], y=[dom], title='Days on Market')
+    #Create Graphs & Layouts for Each Metric
+    closed_sales_fig = go.Figure(go.Scatter(x=agg_df['Closed Date'], y=agg_df['Closed Sales'], mode='lines+markers')) #Closed Sales Graph
+    closed_sales_fig.update_layout(title='Closed Sales') #Graph Layout
+    median_price_fig = go.Figure(go.Scatter(x=agg_df['Closed Date'], y=agg_df['Median Price'], mode='lines+markers')) #Median Price Graph
+    median_price_fig.update_layout(title='Median Price') #Graph layout
+    average_price_fig = go.Figure(go.Scatter(x=agg_df['Closed Date'], y=agg_df['Average Price'], mode='lines+markers')) #Average Price Graph
+    average_price_fig.update_layout(title='Average Price') #Graph Layout
+    sp_lp_percentage_fig = go.Figure(go.Scatter(x=agg_df['Closed Date'], y=agg_df['SP/LP Percentage'], mode='lines+markers')) #SP/LP Percentage Graph
+    sp_lp_percentage_fig.update_layout(title='SP/LP Percentage') #Graph Layout
+    dom_fig = go.Figure(go.Scatter(x=agg_df['Closed Date'], y=agg_df['Days on Market'], mode='lines+markers')) #Days on Market Graph
+    dom_fig.update_layout(title='Days on Market') #Graph Layout
+    return closed_sales_fig, median_price_fig, average_price_fig, sp_lp_percentage_fig, dom_fig #Return Graphs
 
-    return closed_sales_fig, median_price_fig, average_price_fig, sp_lp_percentage_fig, dom_fig
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run the Dash app on a specified port.')
-    parser.add_argument('--port', type=int, default=8052, help='Port to run the Dash app on')
-    args = parser.parse_args()
-    app.run_server(debug=True, port=args.port)
+#Main Function
+if __name__ == '__main__':  
+    parser = argparse.ArgumentParser(description='Run the Dash app on a specified port.')  
+    parser.add_argument('--port', type=int, default=8064, help='Port to run the Dash app on') #Add Port Argument, Change # When Reopening
+    args = parser.parse_args() #Parse Command-Line Arguments
+    app.run_server(debug=True, port=args.port) #Run Dash App 
