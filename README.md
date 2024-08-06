@@ -1,10 +1,11 @@
 # Real Estate Dashboard Overview
-In collaboration with Monroe County Appraisal Associates (MCAA), this project builds an application that allows users to quickly and accurately evaluate several metrics for unique counties, towns, school districts, and timeframes within the Greater Rochester Area. All real estate data since 2018 was originally downloaded and concatenated from the Multiple Listing Service (MLS), a database that tracks every sale within New York. Useful metrics were cleaned and standardized to ensure accurate results for each selection. Users can select from the following 4 Drop-Down options:
+In collaboration with Monroe County Appraisal Associates (MCAA), this project builds an application that allows users to quickly and accurately evaluate several metrics for unique counties, towns, school districts, and timeframes within the Greater Rochester Area. All real estate data since 2018 was originally downloaded and concatenated from the Multiple Listing Service (MLS), a database that tracks every sale within New York. Useful metrics were cleaned and standardized to ensure accurate results for each selection. 
+### Users can select from the following 4 Drop-Down options:
 1. County
 2. Town
 3. School District
 4. Timeframe (Used for Time Series Analysis)
-Outputs from Drop-Down Selections:
+### Outputs from Drop-Down Selections:
 1. Closed Sales (Tracks Number of Sales)
 2. Median Price
 3. Average Price
