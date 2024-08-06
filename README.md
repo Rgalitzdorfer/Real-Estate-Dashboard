@@ -4,7 +4,7 @@ In collaboration with Monroe County Appraisal Associates (MCAA), this project bu
 2. Town
 3. School District
 4. Timeframe (Used for Time Series Analysis)
-5 Outputs from Drop-Down Selections:
+Outputs from Drop-Down Selections:
 1. Closed Sales (Tracks Number of Sales)
 2. Median Price
 3. Average Price
